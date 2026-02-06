@@ -1,0 +1,28 @@
+# ── 환경 변수 (절대 커밋 금지) ──
+.env
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# ── 데이터 (원본 PDF, 벡터DB는 커밋하지 않음) ──
+data/input_pdfs/*.pdf
+data/output_md/*.md
+data/images/
+data/vectorstore/
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ──
+.DS_Store
+Thumbs.db
