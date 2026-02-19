@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .dockerignore
+# Docker 빌드 컨텍스트에서 제외할 파일 목록
+# 이미지 크기를 줄이고 빌드 속도를 높인다.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python 캐시
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# 가상환경
+.venv/
+venv/
+env/
+ENV/
+
+# 테스트 / 커버리지
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# 개발 도구
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 데이터 디렉토리 (볼륨으로 마운트)
+data/
+tests/sample_pdfs/
+
+# 모델 캐시 (볼륨으로 마운트)
+models/
+
+# 환경변수 파일 (절대 이미지에 포함시키지 않음)
+.env
+.env.*
+!.env.example
+
+# 문서
+*.md
+!README.md
+
+# 디버그 출력
+debug_output/
+*.log
+
+# 기타
+*.pdf
+*.tmp

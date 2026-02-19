@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.Python
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# 환경변수 (절대 커밋 금지)
+.env
+.env.*
+!.env.example
+
+# 데이터 파일 (볼륨 마운트 경로)
+data/input/*
+data/output/*
+data/debug/*
+# .gitkeep 파일은 추적
+!data/input/.gitkeep
+!data/output/.gitkeep
+!data/debug/.gitkeep
+
+# docling 모델 캐시
+models/
+.cache/
+
+# 테스트 PDF
+tests/sample_pdfs/*.pdf
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 로그
+*.log
+debug_output/

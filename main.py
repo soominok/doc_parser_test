@@ -23,21 +23,25 @@ PDF → Markdown 변환 파이프라인 메인 진입점.
                                          ▼
                                    .md 파일 출력
 
-[사용법]
-  # 단일 파일 변환
+[사용법 - 로컬]
   python main.py --input document.pdf
-
-  # 디렉토리 일괄 변환
   python main.py --input ./pdfs/ --output ./output/
-
-  # LLM 보강 활성화 (환경변수 필요)
-  LLM_PROVIDER=openai OPENAI_API_KEY=sk-... python main.py --input document.pdf
-
-  # docling 없이 폰트 기반만 사용 (빠른 처리)
   python main.py --input document.pdf --no-docling
-
-  # 중간 결과 저장 (디버깅)
   python main.py --input document.pdf --debug
+
+[사용법 - Docker CLI 모드]
+  # INPUT_DIR 전체 처리 (entrypoint가 자동으로 --input 설정)
+  docker-compose run --rm parser
+
+  # 특정 파일만 처리
+  docker-compose run --rm parser --input /app/input/계약서.pdf
+
+  # 옵션 전달
+  docker-compose run --rm parser --input /app/input/ --no-docling --verbose
+
+[사용법 - Docker API 모드]
+  docker-compose up api
+  curl -X POST http://localhost:8000/parse -F "file=@문서.pdf" --output 문서.md
 ─────────────────────────────────────────────────────────────────────────────
 """
 
@@ -205,11 +209,21 @@ def _parse_args() -> argparse.Namespace:
         description="PDF → Markdown 변환기 (docling + pdfplumber + PyMuPDF 통합)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-예시:
+로컬 실행 예시:
   python main.py --input contract.pdf
   python main.py --input ./docs/ --output ./output/
   python main.py --input manual.pdf --no-docling
   python main.py --input report.pdf --debug --verbose
+
+Docker CLI 모드 예시:
+  docker-compose run --rm parser
+  docker-compose run --rm parser --input /app/input/문서.pdf
+  docker-compose run --rm parser --input /app/input/ --no-docling
+
+Docker API 모드:
+  docker-compose up api
+  curl -X POST http://localhost:8000/parse -F "file=@문서.pdf" --output 문서.md
+  curl -X POST http://localhost:8000/parse/batch -F "files=@a.pdf" -F "files=@b.pdf"
         """,
     )
 

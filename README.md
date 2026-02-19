@@ -9,17 +9,31 @@
 ```
 doc_parser_test/
 │
+├── Dockerfile                    # 멀티스테이지 빌드 (builder + runtime)
+├── docker-compose.yml            # CLI 배치 모드 + REST API 서버 모드
+├── docker-entrypoint.sh          # 컨테이너 시작 스크립트 (APP_MODE 분기)
+├── .dockerignore                 # Docker 빌드 제외 목록
+│
 ├── main.py                       # 메인 진입점 (CLI)
-├── config.py                     # 전체 설정 중앙 관리
+├── config.py                     # 전체 설정 중앙 관리 (환경변수/Docker 경로 지원)
 ├── requirements.txt              # 의존 패키지 목록
 ├── .env.example                  # 환경변수 예시 (LLM API 키 등)
 │
-├── parsers/                      # 파서 모듈
+├── api/
+│   └── app.py                    # FastAPI REST API (Docker API 모드)
+│                                 #   POST /parse          - PDF → Markdown 텍스트 반환
+│                                 #   POST /parse/file     - PDF → 파일 저장
+│                                 #   POST /parse/batch    - 여러 PDF → ZIP 반환
+│                                 #   POST /jobs           - 비동기 작업 등록
+│                                 #   GET  /jobs/{id}      - 작업 상태 조회
+│                                 #   GET  /jobs/{id}/result - 결과 다운로드
+│
+├── parsers/
 │   ├── pymupdf_parser.py         # 폰트 크기·굵기 메타데이터 추출
 │   ├── pdfplumber_parser.py      # 정확한 텍스트 + 표 추출
 │   └── docling_parser.py         # 문서 구조(heading/table 레이블) 추출
 │
-├── processors/                   # 처리 모듈
+├── processors/
 │   ├── heading_detector.py       # 폰트+docling 정보로 heading 레벨 결정
 │   ├── table_processor.py        # 표 → Markdown 표 변환
 │   └── merger.py                 # 세 파서 결과 통합 → DocumentElement 목록
@@ -29,6 +43,11 @@ doc_parser_test/
 │
 ├── exporters/
 │   └── markdown_exporter.py      # DocumentElement → .md 파일
+│
+├── data/                         # Docker 볼륨 마운트 경로 (gitignore)
+│   ├── input/                    # ← PDF 파일 여기에 넣기
+│   ├── output/                   # ← 변환된 .md 파일 출력
+│   └── debug/                    # ← 디버그 JSON (--debug 옵션)
 │
 └── tests/
     └── sample_pdfs/              # 테스트용 PDF 보관 경로
@@ -49,44 +68,87 @@ doc_parser_test/
 
 ---
 
-## 설치
+## 설치 및 실행
+
+### 방법 1: Docker (권장)
+
+의존성 충돌·시스템 패키지 설치 없이 바로 실행할 수 있습니다.
 
 ```bash
-pip install -r requirements.txt
+# 1) 데이터 디렉토리 생성 + 환경변수 설정
+mkdir -p ./data/input ./data/output ./data/debug
+cp .env.example .env   # 필요시 LLM API 키 입력
+
+# 2) 이미지 빌드 (최초 1회, ~수 분 소요)
+docker-compose build
+
+# 3-A) CLI 배치 모드: ./data/input/ 의 PDF를 ./data/output/ 으로 변환
+cp 계약서.pdf ./data/input/
+docker-compose run --rm parser
+
+# 3-B) 특정 파일만 처리
+docker-compose run --rm parser --input /app/input/계약서.pdf
+
+# 3-C) docling 없이 빠른 처리
+docker-compose run --rm parser --no-docling
+
+# 3-D) REST API 서버 실행
+docker-compose up api
+# → http://localhost:8000/docs 에서 Swagger UI 확인
 ```
 
-> docling은 첫 실행 시 딥러닝 모델을 자동 다운로드합니다 (~1GB).
+#### Docker API 서버 사용 예시 (curl)
+
+```bash
+# 단일 파일 변환 → Markdown 텍스트 반환
+curl -X POST http://localhost:8000/parse \
+     -F "file=@계약서.pdf" \
+     --output 계약서.md
+
+# 여러 파일 일괄 변환 → ZIP 반환
+curl -X POST http://localhost:8000/parse/batch \
+     -F "files=@문서1.pdf" \
+     -F "files=@문서2.pdf" \
+     --output 결과.zip
+
+# 비동기 처리 (대용량 PDF)
+curl -X POST http://localhost:8000/jobs -F "file=@대용량.pdf"
+# → {"job_id": "abc-123", ...}
+curl http://localhost:8000/jobs/abc-123          # 상태 조회
+curl http://localhost:8000/jobs/abc-123/result   # 결과 다운로드
+```
+
+#### 주요 Docker 환경변수
+
+| 환경변수 | 기본값 | 설명 |
+|:---|:---|:---|
+| `APP_MODE` | `cli` | `cli` (배치) 또는 `api` (REST 서버) |
+| `LLM_PROVIDER` | `none` | `openai` / `anthropic` / `none` |
+| `DOCLING_USE_GPU` | `false` | GPU 가속 (NVIDIA 환경) |
+| `DOCLING_OCR_ENABLED` | `true` | OCR 활성화 (스캔 PDF) |
+| `MAX_PAGES` | `0` (전체) | 처리 최대 페이지 수 |
+| `SAVE_INTERMEDIATE` | `false` | 디버그 JSON 저장 |
+| `WORKER_THREADS` | `2` | API 동시 처리 스레드 수 |
 
 ---
 
-## 사용법
+### 방법 2: 로컬 직접 실행
 
-### 단일 파일 변환
 ```bash
+pip install -r requirements.txt
+# docling 첫 실행 시 모델 자동 다운로드 (~1GB)
+
+# 단일 파일
 python main.py --input 계약서.pdf
-# 결과: 계약서_parsed.md (같은 디렉토리에 생성)
-```
 
-### 디렉토리 일괄 변환
-```bash
+# 디렉토리 일괄 변환
 python main.py --input ./pdf_폴더/ --output ./markdown_폴더/
-```
 
-### 빠른 처리 (docling 제외, 폰트 기반만 사용)
-```bash
+# 빠른 처리 (docling 제외)
 python main.py --input 문서.pdf --no-docling
-```
 
-### LLM 보강 활성화
-```bash
-# .env 파일에 API 키 설정 후
-LLM_PROVIDER=openai OPENAI_API_KEY=sk-... python main.py --input 문서.pdf
-```
-
-### 디버깅 (중간 결과 JSON 저장)
-```bash
+# 디버깅
 python main.py --input 문서.pdf --debug --verbose
-# ./debug_output/문서_intermediate.json 생성
 ```
 
 ---

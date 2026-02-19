@@ -4,6 +4,15 @@ config.py
 전체 파이프라인의 설정을 중앙 집중식으로 관리한다.
 - 각 파서·프로세서는 이 모듈에서 설정을 읽어 동작한다.
 - 환경변수(.env)를 우선으로 사용하고, 없으면 기본값을 사용한다.
+
+[Docker 환경변수 매핑]
+  INPUT_DIR              → 입력 PDF 디렉토리 (볼륨 마운트: ./data/input)
+  OUTPUT_DIR             → Markdown 출력 디렉토리 (볼륨 마운트: ./data/output)
+  DEBUG_DIR              → 디버그 JSON 저장 디렉토리
+  DOCLING_USE_GPU        → docling GPU 가속 ("true"/"false")
+  DOCLING_OCR_ENABLED    → OCR 활성화 여부 ("true"/"false")
+  MAX_FILE_SIZE_MB       → API 업로드 최대 파일 크기 (MB)
+  WORKER_THREADS         → API 동시 처리 스레드 수
 ─────────────────────────────────────────────────────────────────────────────
 """
 
@@ -17,7 +26,23 @@ from typing import Literal
 from dotenv import load_dotenv
 
 # .env 파일 로드 (프로젝트 루트에 위치)
+# Docker 환경에서는 docker-compose.yml의 environment 블록이 우선 적용됨
 load_dotenv()
+
+
+def _bool_env(key: str, default: bool = False) -> bool:
+    """환경변수를 bool로 파싱한다. 'true'/'1'/'yes' → True"""
+    val = os.getenv(key, "").strip().lower()
+    if val in ("true", "1", "yes"):
+        return True
+    if val in ("false", "0", "no"):
+        return False
+    return default
+
+
+def _path_env(key: str, default: str) -> Path:
+    """환경변수를 Path로 파싱한다. 없으면 default 경로를 사용한다."""
+    return Path(os.getenv(key, default))
 
 
 # ─────────────────────────────────────────────
@@ -118,16 +143,21 @@ class ParserConfig:
     """파서별 동작 옵션"""
 
     # Docling: GPU 가속 사용 여부 (CUDA 환경에서만 True)
-    docling_use_gpu: bool = False
+    # Docker: DOCLING_USE_GPU=true 로 활성화
+    docling_use_gpu: bool = field(default_factory=lambda: _bool_env("DOCLING_USE_GPU", False))
 
     # Docling: OCR 수행 여부 (스캔 PDF의 경우 True)
-    docling_ocr_enabled: bool = True
+    # Docker: DOCLING_OCR_ENABLED=false 로 비활성화 (텍스트 기반 PDF)
+    docling_ocr_enabled: bool = field(default_factory=lambda: _bool_env("DOCLING_OCR_ENABLED", True))
 
     # PyMuPDF: 텍스트 블록 추출 시 이미지 포함 여부
     pymupdf_include_images: bool = False
 
     # pdfplumber: 페이지 단위 처리 시 최대 페이지 수 (None = 전체)
-    max_pages: int | None = None
+    # Docker: MAX_PAGES=50 으로 제한 가능
+    max_pages: int | None = field(
+        default_factory=lambda: int(os.getenv("MAX_PAGES", "0")) or None
+    )
 
 
 # ─────────────────────────────────────────────
@@ -137,8 +167,12 @@ class ParserConfig:
 class OutputConfig:
     """Markdown 출력 설정"""
 
-    # 출력 디렉토리 (None이면 입력 PDF와 같은 위치)
-    output_dir: Path | None = None
+    # 출력 디렉토리
+    # Docker: OUTPUT_DIR=/app/output (볼륨 마운트)
+    # 로컬: OUTPUT_DIR 미설정 시 입력 PDF와 같은 위치
+    output_dir: Path | None = field(
+        default_factory=lambda: _path_env("OUTPUT_DIR", "") or None
+    )
 
     # 파일명 접미사 (예: "문서.pdf" → "문서_parsed.md")
     suffix: str = "_parsed"
@@ -153,8 +187,13 @@ class OutputConfig:
     max_blank_lines: int = 2
 
     # 중간 결과물(JSON) 저장 여부 (디버깅용)
-    save_intermediate: bool = False
-    intermediate_dir: Path = Path("./debug_output")
+    # Docker: SAVE_INTERMEDIATE=true 로 활성화
+    save_intermediate: bool = field(default_factory=lambda: _bool_env("SAVE_INTERMEDIATE", False))
+
+    # Docker: DEBUG_DIR=/app/debug (볼륨 마운트)
+    intermediate_dir: Path = field(
+        default_factory=lambda: _path_env("DEBUG_DIR", "./debug_output")
+    )
 
 
 # ─────────────────────────────────────────────

@@ -14,6 +14,13 @@ anthropic>=0.30.0           # Claude API 활용 (선택)
 python-dotenv>=1.0.0        # .env 파일에서 API Key 로드
 
 # ─────────────────────────────────────────────
+# REST API 서버 (Docker API 모드)
+# ─────────────────────────────────────────────
+fastapi>=0.111.0            # REST API 프레임워크
+uvicorn[standard]>=0.29.0  # ASGI 서버 (FastAPI 실행)
+python-multipart>=0.0.9    # 파일 업로드(multipart/form-data) 파싱
+
+# ─────────────────────────────────────────────
 # 유틸리티
 # ─────────────────────────────────────────────
 Pillow>=10.0.0              # 페이지 이미지 렌더링 (LLM Vision 입력용)
