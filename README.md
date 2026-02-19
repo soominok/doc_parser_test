@@ -60,6 +60,9 @@ PDF 파일
 doc_parser_test/
 ├── pdf_parser.py        # 단일 파일 (전체 코드)
 ├── requirements.txt     # 의존 라이브러리
+├── Dockerfile           # Docker 이미지 빌드 설정
+├── docker-compose.yml   # Docker Compose 실행 설정
+├── .dockerignore        # Docker 빌드 제외 파일 목록
 └── README.md
 ```
 
@@ -105,28 +108,76 @@ pdf_parser.py
 
 ---
 
-## 설치
+## 설치 및 실행
+
+### 방법 1. Docker (권장)
+
+#### 빠른 시작
 
 ```bash
 # 저장소 클론
 git clone <repository-url>
 cd doc_parser_test
 
-# 의존 라이브러리 설치
-pip install -r requirements.txt
+# 빌드 + 실행 (한 번에)
+docker compose up --build
 ```
 
-> **참고**: `docling` 첫 실행 시 AI 모델을 다운로드합니다 (~수백 MB).
+브라우저에서 `http://localhost:7860` 접속
+
+#### 주요 Docker 명령어
+
+```bash
+# 백그라운드 실행
+docker compose up -d --build
+
+# 로그 확인
+docker compose logs -f
+
+# 중지
+docker compose down
+
+# 모델 캐시 포함 완전 초기화
+docker compose down -v
+```
+
+#### 변환 결과 파일 저장
+
+`docker-compose.yml`에서 `./output:/app/output` 볼륨이 마운트되어 있습니다.
+변환된 `.md` 파일은 **호스트의 `./output/` 폴더**에 자동 저장됩니다.
+
+```bash
+ls ./output/    # 변환된 마크다운 파일 확인
+```
+
+#### 환경변수 설정
+
+| 환경변수 | 기본값 | 설명 |
+|----------|--------|------|
+| `DOCKER_ENV` | `true` | Docker 모드 감지 (브라우저 자동 실행 비활성화) |
+| `GRADIO_HOST` | `0.0.0.0` | Gradio 바인딩 호스트 |
+| `GRADIO_PORT` | `7860` | Gradio 바인딩 포트 |
+| `OUTPUT_DIR` | `/app/output` | 변환 결과 저장 경로 |
+
+포트 변경 예시:
+```bash
+# docker-compose.yml의 ports와 GRADIO_PORT를 함께 수정
+GRADIO_PORT=8080 docker compose up
+```
 
 ---
 
-## 실행
+### 방법 2. 로컬 직접 실행
 
 ```bash
+# 의존 라이브러리 설치
+pip install -r requirements.txt
+
+# 실행 (브라우저 자동 실행)
 python pdf_parser.py
 ```
 
-브라우저가 자동으로 열리며 `http://localhost:7860` 에서 UI에 접근합니다.
+> **참고**: `docling` 첫 실행 시 AI 모델을 다운로드합니다 (~수백 MB). Docker의 경우 `model_cache` 볼륨에 캐시되어 재다운로드 없이 재시작됩니다.
 
 ---
 

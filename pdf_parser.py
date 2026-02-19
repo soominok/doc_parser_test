@@ -1100,10 +1100,13 @@ def create_ui():
 
             markdown = parser.parse(progress_cb=progress_cb)
 
-            # 임시 파일로 저장 (다운로드용)
+            # 출력 디렉토리 결정:
+            #   - 환경변수 OUTPUT_DIR 설정 시 해당 경로 사용 (Docker volume mount 용)
+            #   - 미설정 시 시스템 임시 디렉토리 사용
             stem = Path(pdf_path).stem
-            tmp_dir = tempfile.gettempdir()
-            out_path = os.path.join(tmp_dir, f"{stem}_parsed.md")
+            out_dir = os.environ.get("OUTPUT_DIR", tempfile.gettempdir())
+            os.makedirs(out_dir, exist_ok=True)
+            out_path = os.path.join(out_dir, f"{stem}_parsed.md")
 
             with open(out_path, "w", encoding="utf-8") as f:
                 f.write(markdown)
@@ -1235,13 +1238,26 @@ def create_ui():
 def main():
     """
     애플리케이션 진입점.
-    Gradio UI를 시작하고 브라우저를 자동으로 엽니다.
+    환경변수로 Docker / 로컬 실행 환경을 자동 감지하여 Gradio를 시작합니다.
+
+    [지원 환경변수]
+      DOCKER_ENV   : "true" 이면 Docker 모드 (브라우저 자동 실행 비활성화)
+      GRADIO_HOST  : 바인딩 호스트 (기본: 0.0.0.0)
+      GRADIO_PORT  : 바인딩 포트   (기본: 7860)
     """
     print("=" * 60)
     print("  PDF → Markdown 하이브리드 파서")
     print("=" * 60)
 
-    # 라이브러리 설치 상태 출력
+    # ── Docker 환경 감지 ──────────────────────────────────────────
+    # Dockerfile에서 ENV DOCKER_ENV=true 로 설정됨
+    is_docker = os.environ.get("DOCKER_ENV", "").lower() in ("1", "true", "yes")
+
+    # ── 서버 설정: 환경변수 우선, 없으면 기본값 ───────────────────
+    host = os.environ.get("GRADIO_HOST", "0.0.0.0")
+    port = int(os.environ.get("GRADIO_PORT", "7860"))
+
+    # ── 라이브러리 설치 상태 출력 ──────────────────────────────────
     libs = {
         "docling": DOCLING_AVAILABLE,
         "pymupdf": PYMUPDF_AVAILABLE,
@@ -1253,6 +1269,11 @@ def main():
         status = "✓" if available else "✗ (미설치)"
         print(f"  {lib:15s}: {status}")
 
+    mode_label = "Docker" if is_docker else "로컬"
+    print(f"\n  실행 모드     : {mode_label}")
+    print(f"  서버 주소     : http://{host}:{port}")
+    if is_docker:
+        print("  접속 URL      : http://localhost:{port}  (포트 포워딩 후)")
     print()
 
     if not GRADIO_AVAILABLE:
@@ -1261,10 +1282,10 @@ def main():
 
     demo = create_ui()
     demo.launch(
-        server_name="0.0.0.0",  # 모든 네트워크 인터페이스에서 접근 가능
-        server_port=7860,       # 기본 포트
-        share=False,            # 공개 URL 생성 비활성화 (True로 변경 시 공개 URL 생성)
-        inbrowser=True,         # 브라우저 자동 실행
+        server_name=host,             # 모든 네트워크 인터페이스 (컨테이너 외부 접근 허용)
+        server_port=port,             # 환경변수 또는 기본 7860
+        share=False,                  # 공개 URL 생성 비활성화
+        inbrowser=not is_docker,      # Docker 환경에서는 브라우저 자동 실행 비활성화
     )
 
 
