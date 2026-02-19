@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .gitattributes
+#
+# Windows에서 작업하더라도 쉘 스크립트·Dockerfile 등의 줄바꿈이
+# CRLF(\r\n)가 아닌 LF(\n)로 커밋되도록 강제한다.
+#
+# "eol=lf" : Git이 체크아웃할 때 LF로 변환
+# "text"   : 텍스트 파일로 인식하여 자동 줄바꿈 변환 대상에 포함
+# "binary" : 바이너리 파일은 변환하지 않음
+#
+# [문제 상황]
+#   Windows에서 docker-entrypoint.sh 를 CRLF로 저장하면
+#   Linux 컨테이너에서 "exec /app/docker-entrypoint.sh: no such file or directory"
+#   오류가 발생한다. (#!/bin/bash\r 로 읽히기 때문)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 기본: 모든 텍스트 파일을 자동 감지하여 줄바꿈 정규화
+* text=auto
+
+# ── LF 강제 적용 (Linux/Mac 실행 파일) ──
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+docker-compose* text eol=lf
+.env*           text eol=lf
+Makefile        text eol=lf
+
+# ── Python 소스 ──
+*.py            text eol=lf
+
+# ── 설정/문서 ──
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.json          text eol=lf
+*.md            text eol=lf
+*.txt           text eol=lf
+*.cfg           text eol=lf
+*.toml          text eol=lf
+*.ini           text eol=lf
+
+# ── 바이너리 (변환 금지) ──
+*.pdf           binary
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.zip           binary
+*.gz            binary
+*.tar           binary
+*.pt            binary
+*.safetensors   binary
+*.bin           binary

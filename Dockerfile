@@ -64,6 +64,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr-kor \
     tesseract-ocr-eng \
     curl \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # 빌더 스테이지에서 설치된 Python 패키지를 복사
@@ -80,6 +81,12 @@ RUN mkdir -p /app/input /app/output /app/models /app/debug
 
 # 소스 코드 복사
 COPY . .
+
+# ── Windows CRLF → LF 변환 ───────────────────────────────────────────────────
+# Windows에서 작성된 .sh 파일은 줄 끝이 \r\n(CRLF)이다.
+# Linux 컨테이너는 \r을 파일명의 일부로 읽어 "no such file or directory" 오류 발생.
+# dos2unix로 모든 쉘 스크립트를 LF로 강제 변환한다.
+RUN find /app -name "*.sh" -exec dos2unix {} \;
 
 # ── docling 모델 캐시 경로 설정 ──────────────────────────────────────────────
 # docling은 HuggingFace Hub에서 모델을 다운로드한다.
@@ -106,7 +113,7 @@ ENV APP_MODE=cli
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# entrypoint 실행 권한 부여
+# entrypoint 실행 권한 부여 (dos2unix 변환 이후에 chmod)
 RUN chmod +x /app/docker-entrypoint.sh
 
 # API 서버 포트 노출
