@@ -1,0 +1,19 @@
+# ── Core PDF parsers ──────────────────────────────────────────────────────────
+# docling: structure detection, header recognition, table extraction
+docling>=2.0.0
+
+# pymupdf4llm: header hierarchy (H1/H2/H3), table markdown
+pymupdf4llm>=0.0.17
+
+# pdfplumber: accurate text with correct line breaks, image-embedded text
+pdfplumber>=0.10.3
+
+# ── DOCX support ──────────────────────────────────────────────────────────────
+python-docx>=1.1.2
+
+# ── HWP support ───────────────────────────────────────────────────────────────
+# pyhwp provides the `hwp5txt` CLI used by HWPConverter
+pyhwp>=0.1b15
+
+# OLE file parsing (used as HWP fallback via raw stream extraction)
+olefile>=0.47

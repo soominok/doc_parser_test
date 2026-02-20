@@ -1,0 +1,29 @@
+services:
+  converter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: doc-to-md:latest
+    container_name: doc_converter
+
+    # ── X11 display forwarding (Linux host) ──────────────────────────────────
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+
+    volumes:
+      # X11 socket — required for tkinter GUI on Linux
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # Output directory (created automatically if absent)
+      - ./output:/data/output
+      # Mount your documents directory; adjust the host path as needed
+      - ${DOCS_DIR:-./docs}:/data/docs
+
+    # network_mode: host gives the container direct access to the X server
+    network_mode: host
+
+    # Keep stdin open so the GUI can receive keyboard events
+    stdin_open: true
+    tty: true
+
+    # Prevent the container from running as root (optional but recommended)
+    # user: "${UID:-1000}:${GID:-1000}"
