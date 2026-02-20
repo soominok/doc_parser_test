@@ -1201,10 +1201,9 @@ def create_ui():
                 with gr.Tabs():
                     with gr.Tab("마크다운 소스"):
                         md_output = gr.Textbox(
-                            label="마크다운 텍스트 (복사 가능)",
+                            label="마크다운 텍스트",
                             lines=35,
                             max_lines=60,
-                            show_copy_button=True,
                             placeholder="PDF를 업로드하고 '변환 시작'을 클릭하세요.",
                         )
 
@@ -1273,7 +1272,7 @@ def main():
     print(f"\n  실행 모드     : {mode_label}")
     print(f"  서버 주소     : http://{host}:{port}")
     if is_docker:
-        print("  접속 URL      : http://localhost:{port}  (포트 포워딩 후)")
+        print(f"  접속 URL      : http://localhost:{port}  (포트 포워딩 후)")
     print()
 
     if not GRADIO_AVAILABLE:
