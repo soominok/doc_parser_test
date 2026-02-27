@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  parser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # 호스트의 입출력 폴더를 컨테이너와 공유
+    volumes:
+      - ./data/input_files:/app/data/input_files   # 변환할 파일 넣는 곳
+      - ./data/output_mds:/app/data/output_mds     # 결과 .md 파일 저장 위치
+    # 파싱이 끝나면 컨테이너 자동 종료 (배치 실행)
+    restart: "no"
